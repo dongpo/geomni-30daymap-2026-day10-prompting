@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>地震的深淺如何分布？</title>
+<style>
+:root{--bg:#050d15;--sea:#0b2236;--ink:#e8eef4;--mut:#9fb2c3;--line:#2b4157;--panel:#0f1c2a;--hi:#f5d442}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+.app{display:grid;grid-template-columns:1fr 370px;height:100vh}
+#stage{position:relative;min-height:0;min-width:0;background:var(--bg);overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:16px 16px 28px}
+h1{font-size:20px;margin:0 0 4px;line-height:1.3}
+h2{font-size:14px;margin:18px 0 6px;color:var(--hi)}
+p{margin:6px 0}
+.mut{color:var(--mut);font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+button{font:inherit;color:var(--ink);background:#162a3d;border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+button:hover{background:#1d3650}
+button[aria-pressed=true]{background:var(--hi);color:#111;border-color:var(--hi);font-weight:700}
+button:focus-visible,a:focus-visible{outline:2px solid #7cc4ff;outline-offset:2px}
+a{color:#7cc4ff}
+.zoom{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:38px;height:38px;font-size:20px;padding:0;background:#0f1c2acc}
+.north{position:absolute;right:12px;top:10px;text-align:center;font-weight:700;line-height:1;pointer-events:none;color:#cfe0ee}
+.north i{display:block;font-style:normal;font-size:22px}
+.proj{position:absolute;left:10px;bottom:8px;right:10px;font-size:12px;color:#b7c8d6;text-shadow:0 1px 2px #000;pointer-events:none}
+.ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:#050d15d9;text-align:center;padding:20px;z-index:2}
+.ov.on{display:flex}
+#empty{background:transparent;pointer-events:none;z-index:1;font-weight:700}
+dl{display:grid;grid-template-columns:5.5em 1fr;gap:2px 8px;margin:6px 0}
+dt{color:var(--mut)}dd{margin:0;word-break:break-word}
+.stats{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px}
+.stats b{text-align:right;font-variant-numeric:tabular-nums}
+#list{list-style:none;margin:6px 0;padding:0;display:grid;gap:4px}
+#list button{width:100%;text-align:left;font-size:13px}
+.lg{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:13px}
+.dot{display:inline-block;border-radius:50%;border:1px solid #06121d;flex:none}
+.lgs{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+details{margin-top:12px}summary{cursor:pointer;color:var(--hi);font-weight:700}
+details li{margin:4px 0;font-size:13px}
+@media(max-width:800px){
+ .app{display:block;height:auto}
+ #stage{height:64vh}
+ aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
+ .proj{font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div id="stage">
+ <canvas id="map" aria-label="近30天規模4.5以上地震的震源深度地圖"></canvas>
+ <div class="zoom"><button id="zin" aria-label="放大">＋</button><button id="zout" aria-label="縮小">－</button></div>
+ <div class="north" aria-label="北方朝上"><i>▲</i>N</div>
+ <div class="proj">Web Mercator 投影，北方朝上。高緯度面積被放大，不適合直接比較面積或地震密度。</div>
+ <div id="empty" class="ov">沒有符合條件的事件</div>
+ <div id="loading" class="ov on"><div id="ovmsg">載入中⋯⋯正在讀取 USGS 與 Natural Earth 資料</div><button id="retry" hidden>重試</button></div>
+</div>
+<aside>
+ <h1>地震的深淺如何分布？</h1>
+ <p class="mut">USGS 近30天規模4.5以上地震。顏色是震源深度，大小是規模分級。#30DayMapChallenge Day 10。</p>
+
+ <h2>視野</h2>
+ <div class="row"><button id="vwest" aria-pressed="true">西太平洋</button><button id="vglobal" aria-pressed="false">全球（南北緯80°內）</button></div>
+ <h2>最低規模</h2>
+ <div class="row" id="mags"><button data-m="4.5" aria-pressed="true">4.5+</button><button data-m="5" aria-pressed="false">5+</button><button data-m="6" aria-pressed="false">6+</button></div>
+ <div class="row"><button id="png">下載目前地圖 PNG</button></div>
+ <p class="mut" id="status" role="status" aria-live="polite"></p>
+
+ <h2>筆數</h2>
+ <div class="stats">
+  <span>來源總筆數</span><b id="nTotal">—</b>
+  <span>通過資料檢查</span><b id="nValid">—</b>
+  <span>規模篩選後</span><b id="nFilt">—</b>
+  <span>目前視野內</span><b id="nView">—</b>
+ </div>
+ <p class="mut" id="excl"></p>
+ <p class="mut" id="polar"></p>
+
+ <h2>資料時間</h2>
+ <dl>
+  <dt>來源產製</dt><dd id="tGen">—</dd>
+  <dt>網頁取得</dt><dd id="tFetch">—</dd>
+  <dt>事件時間</dt><dd id="tRange">—</dd>
+ </dl>
+
+ <h2>事件詳情</h2>
+ <div id="detail" class="mut">點選地圖上的圓點，或從下方清單選取事件。</div>
+
+ <h2>視野內規模最大的事件</h2>
+ <ul id="list"></ul>
+
+ <h2>圖例</h2>
+ <div class="lg"><span class="dot" style="width:14px;height:14px;background:#f5d442"></span>深度小於 70 km（含負深度原值）</div>
+ <div class="lg"><span class="dot" style="width:14px;height:14px;background:#ff5fa2"></span>70 至小於 300 km</div>
+ <div class="lg"><span class="dot" style="width:14px;height:14px;background:#9b5cf6"></span>300 km 以上</div>
+ <div class="lg"><span class="dot" style="width:14px;height:14px;background:#9aa3ab"></span>深度未知</div>
+ <div class="lgs" style="margin-top:8px">
+  <span class="lg"><span class="dot" style="width:9px;height:9px;background:#ccc"></span>M4.5–&lt;5</span>
+  <span class="lg"><span class="dot" style="width:15px;height:15px;background:#ccc"></span>M5–&lt;6</span>
+  <span class="lg"><span class="dot" style="width:22px;height:22px;background:#ccc"></span>M6+</span>
+ </div>
+ <p class="mut">大小是規模分級，不是能量比例；顏色是深度，不是危險程度。</p>
+
+ <details open>
+  <summary>資料說明</summary>
+  <ul>
+   <li>地震資料來自 <a href="https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php" target="_blank" rel="noopener noreferrer">USGS</a>，只顯示 type 為 earthquake 且座標與規模有效的紀錄；不符者已排除並計數。</li>
+   <li>深度未知以灰色表示，不會被當成 0。來源若有負深度，保留原值並歸入小於 70 km。</li>
+   <li>簡化陸地輪廓來自 Natural Earth 110m，為 public domain，適合區域或全球觀看，小島可能省略。</li>
+   <li>全球視野限於南北緯 80° 內；超出者不繪製，另計於上方。</li>
+   <li>本圖不是地震預測、警報或風險評估。各地觀測與資料收錄完整度不同，沒有點不代表沒有地震。</li>
+   <li>網頁需要網路連線，來源資料會隨時間更新。</li>
+   <li>操作：拖曳平移、滾輪或按鈕縮放；觸控裝置請用單指拖曳與按鈕縮放。</li>
+  </ul>
+ </details>
+</aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+var SRC={
+ q:'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson',
+ land:'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson'
+};
+var $=function(s){return document.querySelector(s)};
+var cv=$('#map'),ctx=cv.getContext('2d'),stage=$('#stage');
+var W=0,H=0,dpr=1,Q=[],F=[],land=[],hits=[],sel=null,mode='west',minMag=4.5,loaded=false;
+var view={cx:.5,cy:.5,s:1},info={total:0,bad:{eq:0,coord:0,mag:0},gen:null,fetched:null,t0:null,t1:null,polar:0};
+var clampLat=function(l){return Math.max(-85,Math.min(85,l))};
+var mx=function(lon){return (lon+180)/360};
+var my=function(lat){var r=clampLat(lat)*Math.PI/180;return .5-Math.log(Math.tan(Math.PI/4+r/2))/(2*Math.PI)};
+var ilat=function(y){return Math.atan(Math.sinh((.5-y)*2*Math.PI))*180/Math.PI};
+var Y0=my(80),Y1=my(-80);
+var X=function(x){return W/2+(x-view.cx)*view.s};
+var Yp=function(y){return H/2+(y-view.cy)*view.s};
+
+function fmt(ms){return typeof ms==='number'&&isFinite(ms)?new Date(ms).toISOString().replace('T',' ').slice(0,16)+' UTC':'未提供'}
+function colorOf(d){return d==null?'#9aa3ab':d<70?'#f5d442':d<300?'#ff5fa2':'#9b5cf6'}
+function radOf(m){return m<5?4.5:m<6?7.5:11}
+function el(t,txt){var e=document.createElement(t);if(txt!=null)e.textContent=txt;return e}
+function safeUrl(u){try{var x=new URL(u);return x.protocol==='https:'&&x.hostname==='earthquake.usgs.gov'?x.href:null}catch(e){return null}}
+
+/* ---------- view ---------- */
+function minS(){return Math.min(W/1,H/(Y1-Y0))}
+function clampView(){
+ var m=minS();
+ view.s=Math.min(Math.max(view.s,m),m*80);
+ var hw=W/(2*view.s),hh=H/(2*view.s);
+ view.cx=hw>=.5?.5:Math.min(Math.max(view.cx,hw),1-hw);
+ var ym=(Y0+Y1)/2;
+ view.cy=hh>=(Y1-Y0)/2?ym:Math.min(Math.max(view.cy,Y0+hh),Y1-hh);
+}
+function fit(l0,l1,a0,a1){
+ var x0=mx(l0),x1=mx(l1),ya=my(a1),yb=my(a0);
+ view.s=Math.min(W/(x1-x0),H/(yb-ya));
+ view.cx=(x0+x1)/2;view.cy=(ya+yb)/2;clampView();
+}
+function setMode(m){
+ mode=m;
+ $('#vwest').setAttribute('aria-pressed',m==='west');
+ $('#vglobal').setAttribute('aria-pressed',m==='global');
+ if(m==='west')fit(100,165,-10,55);
+ else{view.s=minS();view.cx=.5;view.cy=(Y0+Y1)/2;clampView()}
+ render();schedList();
+}
+function zoomAt(px,py,f){
+ var wx=view.cx+(px-W/2)/view.s,wy=view.cy+(py-H/2)/view.s;
+ view.s*=f;clampView();
+ view.cx=wx-(px-W/2)/view.s;view.cy=wy-(py-H/2)/view.s;clampView();
+ render();schedList();
+}
+
+/* ---------- drawing ---------- */
+function niceStep(deg){var a=[1,2,5,10,15,30,45],i;for(i=0;i<a.length;i++)if(a[i]>=deg)return a[i];return 60}
+function draw(c,exp){
+ var x0=X(0),x1=X(1),ya=Yp(Y0),yb=Yp(Y1),i,j,k;
+ c.fillStyle='#050d15';c.fillRect(0,0,W,H);
+ c.save();c.beginPath();c.rect(x0,ya,x1-x0,yb-ya);c.clip();
+ c.fillStyle='#0b2236';c.fillRect(x0,ya,x1-x0,yb-ya);
+ /* graticule */
+ var lonMin=(view.cx-W/(2*view.s))*360-180,lonMax=(view.cx+W/(2*view.s))*360-180;
+ var latTop=Math.min(80,ilat(view.cy-H/(2*view.s))),latBot=Math.max(-80,ilat(view.cy+H/(2*view.s)));
+ var step=niceStep(80*360/view.s);
+ c.lineWidth=1;c.strokeStyle='rgba(150,185,215,.18)';c.fillStyle='rgba(190,210,228,.7)';c.font='11px system-ui,sans-serif';
+ c.beginPath();
+ for(i=Math.ceil(Math.max(lonMin,-180)/step)*step;i<=Math.min(lonMax,180);i+=step){var gx=Math.round(X(mx(i)))+.5;c.moveTo(gx,0);c.lineTo(gx,H)}
+ for(i=Math.ceil(latBot/step)*step;i<=latTop;i+=step){var gy=Math.round(Yp(my(i)))+.5;c.moveTo(x0,gy);c.lineTo(x1,gy)}
+ c.stroke();
+ c.textBaseline='top';c.textAlign='left';
+ for(i=Math.ceil(Math.max(lonMin,-180)/step)*step;i<=Math.min(lonMax,180);i+=step){
+  var lx=X(mx(i));if(lx>20&&lx<W-20)c.fillText(Math.abs(i)+'°'+(i<0?'W':i>0?'E':''),lx+3,Math.max(ya,0)+3)}
+ for(i=Math.ceil(latBot/step)*step;i<=latTop;i+=step){
+  var ly=Yp(my(i));if(ly>16&&ly<H-8)c.fillText(Math.abs(i)+'°'+(i<0?'S':i>0?'N':''),Math.max(x0,0)+4,ly+2)}
+ /* land (all polygons, all rings, even-odd) */
+ c.beginPath();
+ for(i=0;i<land.length;i++)for(j=0;j<land[i].length;j++){
+  var r=land[i][j];
+  for(k=0;k<r.length;k++){var px=X(r[k][0]),py=Yp(r[k][1]);k?c.lineTo(px,py):c.moveTo(px,py)}
+  c.closePath();
+ }
+ c.fillStyle='#2a3f52';c.fill('evenodd');
+ c.strokeStyle='#7f9cb5';c.lineWidth=1;c.lineJoin='round';c.stroke();
+ /* quakes */
+ var n=0;if(!exp)hits=[];
+ for(i=0;i<F.length;i++){
+  var f=F[i],sx=X(f.x),sy=Yp(f.y),rr=radOf(f.mag);
+  if(sx<-rr||sy<-rr||sx>W+rr||sy>H+rr)continue;
+  if(!exp){if(sx>=0&&sx<=W&&sy>=0&&sy<=H)n++;hits.push({f:f,x:sx,y:sy,r:rr})}
+  c.beginPath();c.arc(sx,sy,rr,0,6.2832);
+  c.globalAlpha=.82;c.fillStyle=colorOf(f.depth);c.fill();c.globalAlpha=1;
+  c.lineWidth=1;c.strokeStyle='#06121d';c.stroke();
+ }
+ if(sel&&F.indexOf(sel)>=0){
+  c.beginPath();c.arc(X(sel.x),Yp(sel.y),radOf(sel.mag)+4,0,6.2832);c.lineWidth=2.5;c.strokeStyle='#fff';c.stroke();
+ }
+ c.restore();
+ return n;
+}
+var raf=0;
+function render(){
+ if(raf)return;
+ raf=requestAnimationFrame(function(){
+  raf=0;if(!W)return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  var n=draw(ctx,false);
+  $('#nView').textContent=loaded?n:'—';
+ });
+}
+var lt=0;
+function schedList(){clearTimeout(lt);lt=setTimeout(buildList,120)}
+function buildList(){
+ var ul=$('#list');ul.textContent='';
+ if(!loaded)return;
+ var v=F.filter(function(f){var x=X(f.x),y=Yp(f.y);return x>=0&&x<=W&&y>=0&&y<=H}).sort(function(a,b){return b.mag-a.mag}).slice(0,8);
+ if(!v.length){var li=el('li','目前視野內沒有符合條件的事件。');li.className='mut';ul.appendChild(li);return}
+ v.forEach(function(f){
+  var li=el('li'),b=el('button','M'+f.mag.toFixed(1)+'｜深 '+(f.depth==null?'未知':f.depth+' km')+'｜'+f.place);
+  b.addEventListener('click',function(){select(f)});
+  li.appendChild(b);ul.appendChild(li);
+ });
+}
+
+/* ---------- detail ---------- */
+function select(f){
+ sel=f;var d=$('#detail');d.textContent='';d.className='';
+ var dl=el('dl');
+ function add(k,v){dl.appendChild(el('dt',k));dl.appendChild(el('dd',v))}
+ add('地名',f.place);
+ add('規模','M'+f.mag+(f.magType?'（'+f.magType+'）':'（規模類型未提供）'));
+ add('震源深度',f.depth==null?'未知':f.depth+' km');
+ add('經緯度',Math.abs(f.lat).toFixed(3)+'°'+(f.lat<0?'S':'N')+'，'+Math.abs(f.lon).toFixed(3)+'°'+(f.lon<0?'W':'E'));
+ add('UTC時間',fmt(f.time));
+ add('事件ID',f.id);
+ var dd=el('dd'),u=safeUrl(f.url);
+ if(u){var a=el('a','開啟 USGS 事件頁');a.href=u;a.target='_blank';a.rel='noopener noreferrer';dd.appendChild(a)}else dd.textContent='無可用的 USGS 官方連結';
+ dl.appendChild(el('dt','原始資料'));dl.appendChild(dd);
+ d.appendChild(dl);render();
+}
+
+/* ---------- data ---------- */
+function get(url,label){
+ var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},20000);
+ return fetch(url,{signal:ctl.signal}).then(function(r){
+  clearTimeout(t);if(!r.ok)throw new Error(label+'：HTTP '+r.status);return r.json();
+ }).catch(function(e){
+  clearTimeout(t);
+  throw new Error(e.name==='AbortError'?label+'：讀取逾時（20 秒）':(e.message.indexOf(label)===0?e.message:label+'：'+e.message));
+ });
+}
+function load(){
+ loaded=false;sel=null;
+ $('#loading').classList.add('on');$('#retry').hidden=true;$('#ovmsg').textContent='載入中⋯⋯正在讀取 USGS 與 Natural Earth 資料';
+ $('#status').textContent='載入中⋯⋯';
+ Promise.all([get(SRC.q,'USGS 地震資料'),get(SRC.land,'Natural Earth 陸地輪廓')]).then(function(res){
+  parse(res[0],res[1]);
+  $('#loading').classList.remove('on');loaded=true;
+  $('#status').textContent='資料已載入。';
+  if(!W)resize();else setMode(mode);
+  refilter();
+ }).catch(function(e){
+  $('#ovmsg').textContent='讀取失敗。'+e.message+'。請確認網路連線後重試；本頁不會以示意資料取代。';
+  $('#retry').hidden=false;$('#status').textContent='讀取失敗。';
+ });
+}
+function parse(q,l){
+ if(!q||!Array.isArray(q.features))throw new Error('USGS 地震資料：格式不符');
+ if(!l||!Array.isArray(l.features))throw new Error('Natural Earth 陸地輪廓：格式不符');
+ info={total:q.features.length,bad:{eq:0,coord:0,mag:0},gen:q.metadata&&typeof q.metadata.generated==='number'?q.metadata.generated:null,fetched:Date.now(),t0:null,t1:null,polar:0};
+ Q=[];
+ q.features.forEach(function(ft){
+  var p=ft&&ft.properties||{},g=ft&&ft.geometry,c=g&&g.coordinates;
+  if(p.type!=='earthquake'){info.bad.eq++;return}
+  var ok=g&&g.type==='Point'&&Array.isArray(c)&&c.length>=2&&typeof c[0]==='number'&&typeof c[1]==='number'&&isFinite(c[0])&&isFinite(c[1])&&c[0]>=-180&&c[0]<=180&&c[1]>=-90&&c[1]<=90;
+  if(!ok){info.bad.coord++;return}
+  if(typeof p.mag!=='number'||!isFinite(p.mag)){info.bad.mag++;return}
+  var t=typeof p.time==='number'&&isFinite(p.time)?p.time:null;
+  if(t!=null){info.t0=info.t0==null?t:Math.min(info.t0,t);info.t1=info.t1==null?t:Math.max(info.t1,t)}
+  Q.push({id:String(ft.id!=null?ft.id:'未提供'),lon:c[0],lat:c[1],depth:(typeof c[2]==='number'&&isFinite(c[2]))?c[2]:null,
+   mag:p.mag,magType:p.magType?String(p.magType):'',place:String(p.place||'未提供地名'),time:t,url:p.url,x:mx(c[0]),y:my(c[1])});
+ });
+ land=[];
+ l.features.forEach(function(ft){
+  var g=ft&&ft.geometry;if(!g)return;
+  var polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+  polys.forEach(function(rings){land.push(rings.map(function(r){return r.map(function(pt){return [mx(pt[0]),my(pt[1])]})}))});
+ });
+ $('#nTotal').textContent=info.total;
+ $('#nValid').textContent=Q.length;
+ var b=info.bad,n=b.eq+b.coord+b.mag;
+ $('#excl').textContent='排除 '+n+' 筆（非地震 '+b.eq+'、座標無效 '+b.coord+'、規模無效 '+b.mag+'）。';
+ $('#tGen').textContent=fmt(info.gen);
+ $('#tFetch').textContent=fmt(info.fetched);
+ $('#tRange').textContent=info.t0==null?'未提供':fmt(info.t0)+' 至 '+fmt(info.t1);
+}
+function refilter(){
+ var pass=Q.filter(function(f){return f.mag>=minMag});
+ F=pass.filter(function(f){return Math.abs(f.lat)<=80}).sort(function(a,b){return b.mag-a.mag});
+ info.polar=pass.length-F.length;
+ if(sel&&F.indexOf(sel)<0){sel=null;$('#detail').textContent='點選地圖上的圓點，或從下方清單選取事件。';$('#detail').className='mut'}
+ $('#nFilt').textContent=pass.length;
+ $('#polar').textContent=info.polar?'未繪製：緯度超過 ±80° 的極區事件 '+info.polar+' 筆（地圖僅涵蓋南北緯80°內）。':'';
+ $('#empty').classList.toggle('on',pass.length===0);
+ render();schedList();
+}
+
+/* ---------- interaction ---------- */
+function resize(){
+ var r=stage.getBoundingClientRect();W=Math.max(1,Math.round(r.width));H=Math.max(1,Math.round(r.height));
+ dpr=Math.min(window.devicePixelRatio||1,3);
+ cv.width=W*dpr;cv.height=H*dpr;
+ if(!view.init){view.init=true;setMode(mode)}else{clampView();render();schedList()}
+}
+new ResizeObserver(resize).observe(stage);
+var drag=null;
+cv.addEventListener('pointerdown',function(e){drag={x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,moved:0};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',function(e){
+ if(!drag)return;
+ var dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
+ drag.moved+=Math.abs(dx)+Math.abs(dy);
+ view.cx-=dx/view.s;view.cy-=dy/view.s;clampView();render();
+});
+cv.addEventListener('pointerup',function(e){
+ if(!drag)return;var d=drag;drag=null;
+ if(d.moved<6&&loaded){
+  var rc=cv.getBoundingClientRect(),px=e.clientX-rc.left,py=e.clientY-rc.top,best=null,bd=1e9;
+  hits.forEach(function(h){var dd=Math.hypot(h.x-px,h.y-py);if(dd<=h.r+6&&dd<bd){bd=dd;best=h.f}});
+  if(best)select(best);
+ }else schedList();
+});
+cv.addEventListener('pointercancel',function(){drag=null});
+cv.addEventListener('wheel',function(e){
+ e.preventDefault();var rc=cv.getBoundingClientRect();
+ zoomAt(e.clientX-rc.left,e.clientY-rc.top,Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0015)));
+},{passive:false});
+$('#zin').onclick=function(){zoomAt(W/2,H/2,1.6)};
+$('#zout').onclick=function(){zoomAt(W/2,H/2,1/1.6)};
+$('#vwest').onclick=function(){setMode('west')};
+$('#vglobal').onclick=function(){setMode('global')};
+$('#retry').onclick=load;
+document.querySelectorAll('#mags button').forEach(function(b){
+ b.onclick=function(){
+  minMag=parseFloat(b.dataset.m);
+  document.querySelectorAll('#mags button').forEach(function(o){o.setAttribute('aria-pressed',o===b)});
+  if(loaded)refilter();
+ };
+});
+
+/* ---------- PNG export ---------- */
+function wrap(c,text,x,y,maxW,lh){
+ var line='';
+ for(var i=0;i<text.length;i++){
+  var t=line+text[i];
+  if(c.measureText(t).width>maxW&&line){c.fillText(line,x,y);y+=lh;line=text[i]}else line=t;
+ }
+ if(line){c.fillText(line,x,y);y+=lh}
+ return y;
+}
+$('#png').onclick=function(){
+ if(!loaded){$('#status').textContent='資料尚未載入，無法匯出。';return}
+ var oW=W,oH=H,sc=2,EW=Math.max(W,1000),EH=Math.max(H,560),top=64,bot=210;
+ W=EW;H=EH;
+ var cn=document.createElement('canvas');cn.width=EW*sc;cn.height=(top+EH+bot)*sc;
+ var c=cn.getContext('2d');c.scale(sc,sc);
+ c.fillStyle='#0f1c2a';c.fillRect(0,0,EW,top+EH+bot);
+ c.fillStyle='#e8eef4';c.textBaseline='top';c.textAlign='left';
+ c.font='700 24px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';c.fillText('地震的深淺如何分布？',16,12);
+ c.font='13px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';c.fillStyle='#9fb2c3';
+ c.fillText('USGS 近30天規模4.5以上地震｜目前篩選：規模 ≥ '+minMag+'｜'+(mode==='west'?'西太平洋視野':'全球視野')+'｜繪製 '+F.length+' 筆',16,42);
+ c.save();c.translate(0,top);c.beginPath();c.rect(0,0,EW,EH);c.clip();
+ var keepSel=sel;draw(c,true);c.restore();sel=keepSel;
+ W=oW;H=oH;
+ var y=top+EH+14,F13='13px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+ c.font=F13;c.textBaseline='middle';
+ var items=[['#f5d442','深度 <70 km（含負值）'],['#ff5fa2','70–<300 km'],['#9b5cf6','≥300 km'],['#9aa3ab','深度未知']],x=16;
+ items.forEach(function(it){
+  c.beginPath();c.arc(x+7,y+8,7,0,6.2832);c.fillStyle=it[0];c.fill();c.strokeStyle='#06121d';c.stroke();
+  c.fillStyle='#e8eef4';c.fillText(it[1],x+20,y+8);x+=20+c.measureText(it[1]).width+22;
+ });
+ y+=28;x=16;
+ [[4.5,'M4.5–<5'],[7.5,'M5–<6'],[11,'M6+']].forEach(function(it){
+  c.beginPath();c.arc(x+it[0],y+11,it[0],0,6.2832);c.fillStyle='#ccc';c.fill();c.strokeStyle='#06121d';c.stroke();
+  c.fillStyle='#e8eef4';c.fillText(it[1],x+it[0]*2+8,y+11);x+=it[0]*2+16+c.measureText(it[1]).width+16;
+ });
+ c.fillStyle='#9fb2c3';c.fillText('大小是規模分級，非能量比例；顏色是深度，非危險程度。',x+8,y+11);
+ y+=32;c.textBaseline='top';c.fillStyle='#b7c8d6';c.font='12px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+ y=wrap(c,'資料：USGS（地震）；底圖：Natural Earth 110m 簡化陸地輪廓（public domain，小島可能省略）。來源產製：'+fmt(info.gen)+'；網頁取得：'+fmt(info.fetched)+'；事件時間：'+(info.t0==null?'未提供':fmt(info.t0)+' 至 '+fmt(info.t1))+'。',16,y,EW-32,18);
+ y=wrap(c,'投影：Web Mercator，高緯度面積被放大，不適合比較面積或密度；地圖限南北緯80°內'+(info.polar?'（另有 '+info.polar+' 筆極區事件未繪製）':'')+'。本圖不是地震預測、警報或風險評估；各地觀測與收錄完整度不同，沒有點不代表沒有地震。',16,y,EW-32,18);
+ cn.toBlob(function(b){
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='earthquake-depth-map.png';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+ },'image/png');
+ render();
+};
+
+load();
+})();
+</script>
+</body>
+</html>
