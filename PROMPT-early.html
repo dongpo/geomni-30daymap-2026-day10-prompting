@@ -1,0 +1,39 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Day10 可重用提示詞</title><style>body{max-width:900px;margin:36px auto;padding:20px;font:18px/1.85 system-ui;background:#f4f1e8;color:#173747}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}button,a{font:inherit}textarea{width:100%;height:360px}</style><h1>貼給你使用的 AI：產生一張網路資料地圖</h1><p>此提示詞對應本版實作規格；我們已測試參考HTML，尚未在其他模型重新生成驗證，不保證版面相同或一次成功。你不需要安裝GIS工具，但瀏覽器需要網路。</p><a href="map.html">開啟參考地圖</a> · <a href="map.html" download="map.html">下載單檔HTML</a><p><button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value).then(()=>this.textContent='已複製').catch(()=>this.textContent='請在下方全選複製')">複製完整提示詞</button></p><textarea aria-label="完整提示詞">請製作一個可儲存為 map.html 的完整單檔互動地圖，主題是「地震的深淺如何分布？」。這是 #30DayMapChallenge Day10 Prompting only 的讀者實驗。只用瀏覽器原生 HTML、CSS、JavaScript、SVG 或 Canvas，不需要 Python、GIS套件、Node、建置步驟、API金鑰或付費服務。不要要求我先下載或整理資料。
+
+資料由產出的網頁在執行時使用 fetch 直接讀取以下公開 GeoJSON：
+地震：https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson
+陸地：https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson
+欄位說明：https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php
+
+即使你的聊天環境不能執行GIS工具，也請產出完整HTML，交由我的瀏覽器執行。不必由你預先下載或嵌入全部資料。若你不能測試網頁，要明確寫「尚未實測」，不能聲稱已成功產圖。
+
+地震使用features中的Point，coordinates依序為經度、緯度、震源深度km；properties包含mag、magType、place、time（Unix毫秒）、type、url。檢查經緯度及規模是有效數字，僅呈現type=earthquake；不得將null當0。記錄排除筆數。讀取metadata.generated並顯示來源產製時間，以及事件實際時間範圍。這是動態近30天資料，不能寫死筆數或假造日期。
+
+用真正的座標繪製，預設顯示東經100–165度、南緯10至北緯55度的西太平洋區域，提供全球視野與返回按鈕、拖曳平移、縮放、最低規模4.5／5／6篩選，以及點選事件詳情。採Web Mercator投影，說明高緯度面積變形與極區顯示限制；如不畫極區，另計數並說明，不可默默遺漏。處理Polygon與MultiPolygon，包含內環。簡化陸地只作地理背景，不推定板塊或斷層。
+
+以黃、粉、紫分別呈現深度&lt;70km、70–&lt;300km、≥300km，未知用灰；來源負深度保留且說明。圓半徑依規模分三級：4.5–&lt;5、5–&lt;6、≥6；明說這不是能量比例，也不是危險程度。加上經緯網、清楚圖例、北向及投影說明。使用深色海洋背景與繁體中文介面，讓地理輪廓和震央分布成為畫面主角。
+
+點選事件顯示來源地名、規模及類型、深度、經緯度、UTC時間、事件ID和USGS原始頁連結；外部文字用textContent安全呈現。提供鍵盤可用的縮放、篩選按鈕與事件清單。顯示來源總數、有效筆數、篩選後筆數和視野內筆數，沒有事件時明示，不補假點。
+
+加入載入中、逾時／失敗提示及重試按鈕。不要改用來路不明的CORS代理。可加下載目前地圖PNG功能，保留標題、圖例、來源與資料時間。標註USGS地震資料及Natural Earth public-domain陸地輪廓；此圖不是地震預測、警報或風險評估，不同地區資料收錄完整度不一致。
+
+請給我完整HTML檔或單一完整程式碼區塊，以及「存為UTF-8的map.html，用一般瀏覽器開啟並保持網路連線」的簡短操作說明。AI預覽若禁止連外，說明可下載到瀏覽器測試；不要保證所有平台都能預覽。不要交只有框架、假資料或尚待補上資料網址的範本。</textarea><pre>請製作一個可儲存為 map.html 的完整單檔互動地圖，主題是「地震的深淺如何分布？」。這是 #30DayMapChallenge Day10 Prompting only 的讀者實驗。只用瀏覽器原生 HTML、CSS、JavaScript、SVG 或 Canvas，不需要 Python、GIS套件、Node、建置步驟、API金鑰或付費服務。不要要求我先下載或整理資料。
+
+資料由產出的網頁在執行時使用 fetch 直接讀取以下公開 GeoJSON：
+地震：https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson
+陸地：https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson
+欄位說明：https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php
+
+即使你的聊天環境不能執行GIS工具，也請產出完整HTML，交由我的瀏覽器執行。不必由你預先下載或嵌入全部資料。若你不能測試網頁，要明確寫「尚未實測」，不能聲稱已成功產圖。
+
+地震使用features中的Point，coordinates依序為經度、緯度、震源深度km；properties包含mag、magType、place、time（Unix毫秒）、type、url。檢查經緯度及規模是有效數字，僅呈現type=earthquake；不得將null當0。記錄排除筆數。讀取metadata.generated並顯示來源產製時間，以及事件實際時間範圍。這是動態近30天資料，不能寫死筆數或假造日期。
+
+用真正的座標繪製，預設顯示東經100–165度、南緯10至北緯55度的西太平洋區域，提供全球視野與返回按鈕、拖曳平移、縮放、最低規模4.5／5／6篩選，以及點選事件詳情。採Web Mercator投影，說明高緯度面積變形與極區顯示限制；如不畫極區，另計數並說明，不可默默遺漏。處理Polygon與MultiPolygon，包含內環。簡化陸地只作地理背景，不推定板塊或斷層。
+
+以黃、粉、紫分別呈現深度&lt;70km、70–&lt;300km、≥300km，未知用灰；來源負深度保留且說明。圓半徑依規模分三級：4.5–&lt;5、5–&lt;6、≥6；明說這不是能量比例，也不是危險程度。加上經緯網、清楚圖例、北向及投影說明。使用深色海洋背景與繁體中文介面，讓地理輪廓和震央分布成為畫面主角。
+
+點選事件顯示來源地名、規模及類型、深度、經緯度、UTC時間、事件ID和USGS原始頁連結；外部文字用textContent安全呈現。提供鍵盤可用的縮放、篩選按鈕與事件清單。顯示來源總數、有效筆數、篩選後筆數和視野內筆數，沒有事件時明示，不補假點。
+
+加入載入中、逾時／失敗提示及重試按鈕。不要改用來路不明的CORS代理。可加下載目前地圖PNG功能，保留標題、圖例、來源與資料時間。標註USGS地震資料及Natural Earth public-domain陸地輪廓；此圖不是地震預測、警報或風險評估，不同地區資料收錄完整度不一致。
+
+請給我完整HTML檔或單一完整程式碼區塊，以及「存為UTF-8的map.html，用一般瀏覽器開啟並保持網路連線」的簡短操作說明。AI預覽若禁止連外，說明可下載到瀏覽器測試；不要保證所有平台都能預覽。不要交只有框架、假資料或尚待補上資料網址的範本。</pre></html>

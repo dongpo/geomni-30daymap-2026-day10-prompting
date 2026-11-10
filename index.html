@@ -1,0 +1,124 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>一份提示詞，三張地圖｜Geomni Day 10</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#102631;color:#edf2ed;font:17px/1.8 system-ui,-apple-system,sans-serif}main{max-width:1120px;margin:auto;padding:60px 24px}a{color:#9ce1d8}header{max-width:900px;margin-bottom:36px}.eyebrow{color:#efb46b;font-size:12px;letter-spacing:2px}h1{font-size:clamp(32px,5vw,54px);line-height:1.25;margin:18px 0}h2{font-size:25px;margin:0 0 14px}h3{font-size:27px;margin:0}p{margin:12px 0}.lead{font-size:21px;color:#c4d5d8}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:28px 0 40px}.card{border:1px solid #42616c;border-top:3px solid #80c8bd;border-radius:10px;padding:26px;background:#183440}.card p{font-size:15px;color:#bcd0d6;min-height:55px}.button,button{display:inline-block;border:1px solid #87c9be;border-radius:6px;padding:10px 18px;background:#99dfd2;color:#102d36;font:600 16px/1.5 system-ui;text-decoration:none;cursor:pointer}.secondary{background:transparent;color:#c3e8e2;border-color:#577a85}a:focus-visible,button:focus-visible,textarea:focus-visible{outline:3px solid #ffbe75;outline-offset:4px}.minor{font-size:14px;color:#adc2c9}.prompt{background:#f5f2e9;color:#183c48;border-radius:12px;padding:30px}.prompt a{color:#175e68}.prompt textarea{width:100%;height:380px;resize:vertical;padding:20px;border:1px solid #b9c9c8;border-radius:6px;background:#fffef9;color:#193c47;font:15px/1.8 system-ui;tab-size:2}.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:20px 0 12px}.prompt .secondary{color:#234955}.steps{padding-left:24px}#copyStatus{min-height:28px;font-size:14px}.notes{margin:34px 0;padding:24px;border-left:3px solid #dca768;background:#19333e}.notes p{font-size:15px}footer{padding-top:24px;border-top:1px solid #365562;font-size:14px;color:#afc4cc}details{margin:16px 0}summary{cursor:pointer}@media(max-width:750px){main{padding:32px 18px}.cards{grid-template-columns:1fr}.card p{min-height:0}.prompt{padding:22px 18px}.lead{font-size:18px}}</style></head><body><main>
+<header><div class="eyebrow">GEOMNI / #30DAYMAPCHALLENGE 2026 / DAY 10 · PROMPTING ONLY</div><h1>一份提示詞，<br>三張地圖。</h1><p class="lead">不安裝 GIS 工具，讓 AI 寫出一份 HTML，<br>由你的瀏覽器直接讀取公開地理資料。</p><p>先看看 Gemini、Claude 與 ChatGPT 的實作，再複製完整提示詞，交給你使用的 AI 試試看。</p></header>
+<section aria-label="三個模型的地圖"><div class="cards"><article class="card"><h3>Gemini</h3><p>使用者以提示詞測試後提供的原始 HTML。</p><a class="button" href="map_gemini.html" target="_blank" rel="noopener">開啟 Gemini 地圖 ↗</a><p class="minor"><a href="map_gemini.html" download="map_gemini.html">下載 HTML</a></p></article><article class="card"><h3>Claude</h3><p>使用者以提示詞測試後提供的原始 HTML。</p><a class="button" href="map_claude.html" target="_blank" rel="noopener">開啟 Claude 地圖 ↗</a><p class="minor"><a href="map_claude.html" download="map_claude.html">下載 HTML</a></p></article><article class="card"><h3>ChatGPT</h3><p>本聊天製作並經修訂、操作驗收的參考版本。</p><a class="button" href="map_chatgpt.html" target="_blank" rel="noopener">開啟 ChatGPT 地圖 ↗</a><p class="minor"><a href="map_chatgpt.html" download="map_chatgpt.html">下載 HTML</a></p></article></div></section><section class="prompt" id="prompt"><h2>換你試試看</h2><ol class="steps"><li>複製下方完整提示詞，貼到你使用的 AI。</li><li>下載 AI 產生的 HTML；若收到程式碼，存為 UTF-8 的 <b>map.html</b>。</li><li>用瀏覽器開啟並保持網路連線，測試地圖載入、縮放、篩選與點選事件。</li></ol><p>聊天環境不必能執行 GIS。地圖需要的資料，由產出的網頁向 USGS 與 Natural Earth 直接讀取。</p><div class="actions"><button id="copy" type="button">複製完整 prompt</button><button id="select" class="secondary" type="button">全選文字</button><a href="PROMPT.md" download="Day10-prompt.txt">下載提示詞</a></div><div id="copyStatus" role="status" aria-live="polite">與儲存庫 PROMPT.md 為同一份完整內容。</div><textarea id="promptText" aria-label="完整製圖提示詞" readonly spellcheck="false">請製作一個可儲存為 map.html 的完整單檔互動地圖，主題是「地震的深淺如何分布？」。這是 #30DayMapChallenge Day 10「Prompting only」的讀者實驗。
+
+只使用瀏覽器原生 HTML、CSS、JavaScript、SVG 或 Canvas。不要使用 Python、GIS 套件、Node、需要建置的框架、API 金鑰或付費服務。不要要求我先下載、轉換或整理資料。
+
+請直接給我可下載的完整 HTML 檔；若你的環境不能提供檔案，就輸出一個完整的 HTML 程式碼區塊，不要拆成多個檔案，不要省略程式。
+
+一、由網頁直接讀取公開資料
+
+產出的網頁必須在執行時，使用 fetch 直接讀取：
+
+USGS 近30天規模4.5以上地震：
+https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson
+
+Natural Earth 全球簡化陸地輪廓：
+https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson
+
+USGS 欄位說明：
+https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php
+
+即使你的聊天環境無法安裝 GIS 工具或下載資料，也請產出完整 HTML，讓我的瀏覽器負責讀取資料及繪圖。不要因此只給操作建議或空白框架，也不要嵌入虛構的示範點。
+
+若你無法實際測試網頁，請明確寫「尚未實測」，不能宣稱已成功產圖。
+
+二、正確讀取地理資料
+
+地震資料是 GeoJSON FeatureCollection：
+
+- features 中的 geometry.type 應為 Point。
+- geometry.coordinates 依序為經度、緯度、震源深度，深度單位是公里。
+- properties.mag 是規模；magType 是規模類型。
+- properties.place 是來源地名。
+- properties.time 是 Unix 毫秒時間。
+- properties.type 是事件類型。
+- properties.url 是原始事件頁面。
+- feature.id 是事件識別碼。
+
+只呈現 type 為 earthquake、經緯度及規模為有效數字的紀錄。檢查座標範圍；null 不得轉成0。記錄並顯示排除筆數。深度未知仍可保留，以灰色表示。
+
+讀取 metadata.generated，顯示來源產製時間、網頁取得資料的時間，以及事件實際時間範圍。這是動態資料，不得寫死筆數、日期或時間範圍。
+
+陸地輪廓要支援 Polygon、MultiPolygon 及內環，不能只處理第一個多邊形。
+
+三、地圖設計與操作
+
+預設呈現東經100至165度、南緯10至北緯55度的西太平洋區域，讓讀者看見臺灣、日本、菲律賓及周邊海域的地震分布。
+
+使用真正的地理座標和 Web Mercator 投影，不得憑文字描述猜測點位，也不能把經緯度直接當畫面像素。保持地理比例；為適應畫面長寬而擴大視野可以，但不要任意拉伸地圖。
+
+提供：
+- 西太平洋／全球視野切換。
+- 滑鼠或觸控拖曳平移。
+- 放大、縮小按鈕及滾輪縮放。
+- 最低規模4.5、5、6的篩選。
+- 點選地震查看詳情。
+- 目前視野內規模最大的幾筆事件清單，讓鍵盤使用者也能選取事件。
+
+全球視野可以限制為南北緯80度內，但必須明示並另計未繪製的極區事件。說明 Web Mercator 在高緯度會放大面積，不適合直接比較面積或地震密度。
+
+採深色海洋背景、清楚陸地輪廓、繁體中文介面。加上經緯網、北向、投影說明與圖例。地圖應是畫面主角，介面在手機上也能閱讀。
+
+四、用不同符號表達深度與規模
+
+圓點顏色表示震源深度：
+- 黃色：小於70公里。
+- 粉色：70至小於300公里。
+- 紫色：300公里以上。
+- 灰色：深度未知。
+
+來源中的負深度保留原值，歸入小於70公里，並在說明中交代。
+
+圓點大小依規模分為三級：
+- 4.5至小於5：小圓。
+- 5至小於6：中圓。
+- 6以上：大圓。
+
+圖例必須清楚說明：大小是規模分級，不是能量比例；顏色是深度，不是危險程度。縮放時讓點符號維持可讀大小。
+
+不要額外虛構板塊界、斷層、影響範圍或風險分區。
+
+五、事件詳情與資料核對
+
+點選事件時顯示：
+- 來源地名。
+- 規模及規模類型。
+- 震源深度。
+- 經緯度。
+- UTC時間。
+- 事件ID。
+- 可開啟的 USGS 原始事件連結。
+
+外部資料文字用 textContent 等安全方式呈現，不直接插入未處理的 HTML。事件連結只接受 USGS 官方網址。
+
+顯示來源總筆數、通過資料檢查的筆數、規模篩選後筆數、目前視野內筆數。沒有符合條件的事件時明示，不補假資料。
+
+六、載入失敗與輸出
+
+加入載入中、逾時、讀取失敗提示及重試按鈕。若資料來源失敗，不要悄悄換成示意資料，也不要使用來路不明的跨站代理服務。
+
+加入「下載目前地圖 PNG」功能。匯出圖片必須包含地圖、標題、圖例、來源及資料時間，而不是只有沒有說明的圓點。
+
+在資料說明中註明：
+- 地震資料來自 USGS。
+- 簡化陸地輪廓來自 Natural Earth，為 public domain，適合區域或全球觀看，小島可能省略。
+- 本圖不是地震預測、警報或風險評估。
+- 各地觀測與資料收錄完整度不同，沒有點不代表沒有地震。
+- 網頁仍需網路連線，來源資料會隨時間更新。
+
+七、交付方式
+
+請給我完整、可直接使用的單檔 HTML，不要交需要我補網址、裝套件或填入資料的範本。
+
+附上簡短操作說明：
+1. 將完整內容以 UTF-8 儲存為 map.html，確認不是 map.html.txt。
+2. 使用一般瀏覽器開啟，並保持網路連線。
+3. 等待資料載入，測試全球切換、拖曳縮放、規模篩選、事件詳情及PNG下載。
+
+若 AI 的內嵌預覽禁止連外，請說明可下載 HTML 後用一般瀏覽器測試，不要保證所有平台都能預覽。若你實際測試過，列出觀察到的結果；若沒有測試，就如實標示，不得捏造測試數據。
+</textarea></section>
+<section class="notes"><h2>比較的是作品，不是模型排名</h2><p>三份地圖原檔保持不變。Gemini、Claude 的確切模型版本與修訂次數未取得；ChatGPT 版在這份完整提示詞整理前已經製作並驗收，因此這不是相同條件下的一次生成評測，也不保證每個 AI 都能一次成功。</p><p>資料是動態近30天的地震紀錄：不同時間開啟，筆數可能不同。可以比較地理位置、深度圖例、規模篩選與操作是否清楚；不要只比較畫面好不好看。</p><details><summary>資料與使用說明</summary><p>地震來源：<a href="https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php">USGS GeoJSON</a>。陸地輪廓：<a href="https://www.naturalearthdata.com/about/terms-of-use/">Natural Earth（public domain）</a>。此圖不是地震預測、警報或風險評估。</p><p>網路或來源服務受限時，地圖可能無法載入。AI內嵌預覽也可能限制外部連線，可下載HTML到一般瀏覽器測試；此入口不保證所有環境均可執行。</p></details></section><footer>Geomni · Day 10「Prompting only」 · <a href="https://github.com/dongpo/geomni-30daymap-2026-day10-prompting">查看原始碼與來源紀錄</a></footer></main><script>
+const area=document.getElementById('promptText'),status=document.getElementById('copyStatus');document.getElementById('select').onclick=()=>{area.focus();area.select();status.textContent='已全選；請按 Ctrl+C 或 ⌘C 複製。'};document.getElementById('copy').onclick=async()=>{try{await navigator.clipboard.writeText(area.value);status.textContent='已複製完整 prompt，可貼到你使用的 AI。'}catch(e){area.focus();area.select();status.textContent='瀏覽器未允許自動複製；文字已全選，請按 Ctrl+C 或 ⌘C。'}};
+</script></body></html>
